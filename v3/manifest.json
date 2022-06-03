@@ -4,11 +4,10 @@
       "id": "afaetqtgqrgf@adfasrwerq"
     }
   },
-  "manifest_version": 3,
-  "minimum_chrome_version": "95",
-  "version": "0.6.0",
-  "name": "aaa",
-  "description": "aaa",
+  "manifest_version": 2,
+  "version": "0.6.1",
+  "name": "fadfadfasdf",
+  "description": "fadfadfewqare",
   "default_locale": "en",
   "icons": {
     "16": "data/icons/16.png",
@@ -19,21 +18,21 @@
     "256": "data/icons/256.png",
     "512": "data/icons/512.png"
   },
+  "storage": {
+    "managed_schema": "schema.json"
+  },
   "permissions": [
     "idle",
     "storage",
     "tabs",
-    "scripting",
     "contextMenus",
     "notifications",
-    "alarms"
-  ],
-  "host_permissions": [
+    "alarms",
     "*://*/*"
   ],
   "background": {
-    "service_worker": "worker/core.mjs",
-    "type": "module"
+    "persistent": false,
+    "page": "v2.html"
   },
   "content_scripts": [{
     "match_about_blank": true,
@@ -44,16 +43,14 @@
     "run_at": "document_start",
     "all_frames": true
   }],
-  "action": {
+  "browser_action": {
     "default_popup": "data/popup/index.html"
   },
   "options_ui": {
     "page": "data/options/index.html",
     "open_in_tab": true
   },
-  "homepage_url": "https://add0n.com/tab-discard.html",
   "commands": {
-    "_execute_action": {},
     "discard-tab": {
       "description": "__MSG_cmd_discard_tab__"
     },
