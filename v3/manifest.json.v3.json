@@ -1,9 +1,14 @@
 {
+  "applications": {
+    "gecko": {
+      "id": "afaetqtgqrgf"
+    }
+  },
   "manifest_version": 3,
   "minimum_chrome_version": "95",
   "version": "0.6.0",
-  "name": "Auto Tab Discard",
-  "description": "__MSG_app_description__",
+  "name": "aaa",
+  "description": "aaa",
   "default_locale": "en",
   "icons": {
     "16": "data/icons/16.png",
