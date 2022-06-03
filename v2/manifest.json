@@ -1,9 +1,13 @@
 {
+  "applications": {
+    "gecko": {
+      "id": "afaetqtgqrgf@adfasrwerq"
+    }
+  },
   "manifest_version": 2,
-  "version": "0.5.0",
-  "default_locale": "en",
-  "name": "Auto Tab Discard",
-  "description": "__MSG_app_description__",
+  "version": "0.6.1",
+  "name": "fadfadfasdf",
+  "description": "fadfadfewqare",
 
   "icons": {
     "16": "data/icons/16.png",
