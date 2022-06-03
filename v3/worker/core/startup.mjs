@@ -8,6 +8,7 @@ const starters = {
       return c();
     }
     starters.cache.push(c);
+    console.log("startup.mjs");
   }
 };
 
