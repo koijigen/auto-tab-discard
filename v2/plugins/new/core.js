@@ -20,6 +20,7 @@ const run = tab => {
 const observe = {
   tab: tab => tab.active === false && run(tab),
   window: win => {
+    // memo: what this argument for chrome.tabs.query.
     setTimeout(() => chrome.tabs.query({
       windowId: win.id,
       active: false

@@ -100,7 +100,7 @@
       console.warn('plugins module is not loaded');
     }
     //
-    const {menuItemId, shiftKey} = info;
+    const {menuItemId, shiftKey} = info; // memo: menuItemId is used by line 254's query(info). menuItemId is defined here? 
     if (menuItemId === 'whitelist-domain' || menuItemId === 'whitelist-session' || menuItemId === 'whitelist-exact') {
       storage(prefs).then(prefs => {
         const d = menuItemId !== 'whitelist-session';
@@ -251,7 +251,7 @@
       else if (menuItemId === 'discard-other-windows' || menuItemId === 'release-other-windows') {
         info.currentWindow = false;
       }
-      let tabs = await query(info);
+      let tabs = await query(info);// memo: discard tab action is passed here.
       if (menuItemId.endsWith('rights') || menuItemId.endsWith('lefts')) {
         if (menuItemId.endsWith('lefts')) {
           tabs = tabs.filter(t => t.index < tab.index);

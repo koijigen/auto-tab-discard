@@ -21,6 +21,7 @@ const whitelist = {
 };
 
 const init = () => {
+  // memo: what this argument for chrome.tabs.query?
   chrome.tabs.query({
     active: true,
     currentWindow: true

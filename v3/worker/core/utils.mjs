@@ -9,6 +9,7 @@ const notify = e => chrome.notifications.create({
   message: e.message || e
 });
 
+  // memo: what this argument for chrome.tabs.query?
 const query = options => new Promise(resolve => chrome.tabs.query(options, resolve));
 
 const match = (list, hostname, href) => {

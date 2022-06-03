@@ -1,6 +1,8 @@
 /* globals hidden, isFirefox */
 'use strict';
 
+const sleep = second => new Promise(resolve => setTimeout(resolve, second * 1000));
+
 const prefs = {
   'favicon': false,
   'prepends': '💤',
@@ -29,112 +31,18 @@ const storage = prefs => new Promise(resolve => {
   });
 });
 
-const starters = {
-  ready: false,
-  cache: [],
-  push(c) {
-    if (starters.ready) {
-      return c();
-    }
-    starters.cache.push(c);
-  }
-};
-
-{
-  // preference are only up-to-date on the first run. For all other needs call storage().then()
-  const once = () => storage(prefs).then(ps => {
-    Object.assign(prefs, ps);
-    starters.ready = true;
-    starters.cache.forEach(c => c());
-    delete starters.cache;
-  });
-  chrome.runtime.onStartup.addListener(once);
-  chrome.runtime.onInstalled.addListener(once);
-}
-
-// clear session only hostnames from the exception list; only on the local machine
-starters.push(() => chrome.storage.local.set({
-  'whitelist.session': []
-}));
-
-chrome.storage.onChanged.addListener(ps => {
-  Object.keys(ps).forEach(k => {
-    prefs[k] = ps[k].newValue;
-  });
-  if (isFirefox && ps['go-hidden']) {
-    hidden.install();
-  }
-  if (ps.click) {
-    popup();
-  }
-  if (ps['idle-timeout']) {
-    chrome.idle.setDetectionInterval(prefs['idle-timeout']);
-  }
-});
-
-const log = (...args) => prefs.log && console.log(new Date(), ...args);
-
-const notify = e => chrome.notifications.create({ // eslint-disable-line no-unused-vars
-  title: chrome.runtime.getManifest().name,
-  type: 'basic',
-  iconUrl: 'data/icons/48.png',
-  message: e.message || e
-});
-
-const query = options => new Promise(resolve => chrome.tabs.query(options, resolve));
-
-const navigate = (method, discarded = false) => query({
-  currentWindow: true
-}).then(tbs => {
-  const active = tbs.filter(tbs => tbs.active).shift();
-  const next = tbs.filter(t => t.discarded === discarded && t.index > active.index);
-  const previous = tbs.filter(t => t.discarded === discarded && t.index < active.index);
-  let ntab;
-  if (method === 'move-next') {
-    ntab = next.length ? next.shift() : previous.shift();
-  }
-  else {
-    ntab = previous.length ? previous.pop() : next.pop();
-  }
-
-  if (ntab) {
-    chrome.tabs.update(ntab.id, {
-      active: true
-    }, () => {
-      if (method === 'close') {
-        chrome.tabs.remove(active.id);
-      }
-    });
-  }
-  // prevent infinite loop
-  else if (discarded === false) {
-    // https://github.com/rNeomy/auto-tab-discard/issues/41#issuecomment-422923307
-    return navigate(method, true);
-  }
-
-  // https://github.com/rNeomy/auto-tab-discard/issues/264#issuecomment-1001410665
-  if (method === 'close' && !ntab && tbs.length === 1 && tbs[0].active) {
-    chrome.tabs.remove(active.id);
-  }
-});
-
 // this list keeps ids of the tabs that are in progress of being discarded
 const inprogress = new Set();
 
 const discard = tab => {
-  if (inprogress.has(tab.id)) {
-    return;
-  }
+  console.log("called method : discard.");
+  if (inprogress.has(tab.id))return;
   // https://github.com/rNeomy/auto-tab-discard/issues/248
   inprogress.add(tab.id);
   setTimeout(() => inprogress.delete(tab.id), 2000);
 
-  if (tab.active) {
-    return;
-  }
-  if (tab.discarded) {
-    return;
-  }
+  if (tab.active)return;
+  if (tab.discarded) return;
   return storage(prefs).then(prefs => {
     if (discard.count > prefs['simultaneous-jobs'] && discard.time + 5000 < Date.now()) {
       discard.count = 0;
@@ -254,13 +162,189 @@ discard.perform = tab => {
   }
 };
 
-chrome.runtime.onMessageExternal.addListener((request, sender, resposne) => {
+const starters = {
+  ready: false,
+  cache: [],
+  // push(c) {
+  push: async function (c) {
+    if (starters.ready)return c();
+    // console.log("starters.ready is false.  byme");
+    
+    // start: my code here. ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    console.log("start discard tbs. byme");
+
+
+    const cache = {};
+    const query = chrome.tabs.query;
+
+    console.log("query is defined. byme");
+    // console.log("queryInfo is ");
+    // console.log(queryInfo + " byme");
+    
+    await chrome.tabs.query({}, async function(tabs){
+      console.log("tabs count is : ");
+      console.log(tabs.length);
+      
+      for(let i=0; i<tabs.length; i++){
+        console.log("loop counter is :");
+        console.log(i);
+        console.log(tabs.length);
+        let tab = tabs[i];
+          // tab.autoDiscardable = tab.id in cache ? cache[tab.id] : true;
+          discard(tab);
+      }
+    });
+    
+    // chrome.tabs.query = function(queryInfo, callback = () => {}) {
+    //   if ('status' in queryInfo) {
+
+    //     // console.log("value is true : 'status' in queryInfo . byme");
+
+    //     callback([]);
+    //     return;
+    //   }
+
+    //   // console.log("defined query tabs. byme");
+  
+    //   const b = 'autoDiscardable' in queryInfo;
+    //   const v = queryInfo.autoDiscardable;
+    //   delete queryInfo.autoDiscardable;
+
+    //   console.log("start query apply.");
+
+    //   query.apply(this, [queryInfo, tabs => {
+    //     if (b) {
+    //       tabs = tabs.filter(tab => v ? cache[tab.id] !== false : cache[tab.id] === false);
+    //     }
+
+    //     console.log("tabs count is : " + tabs.length + " byme");
+
+    //     for (const tab of tabs) {
+    //       tab.autoDiscardable = tab.id in cache ? cache[tab.id] : true;
+    //       discard(tab);
+    //     }
+    //     callback(tabs);
+    //   }]);
+    // };
+
+    // start: from line 254 at menu.js
+    // const menuItemId="discard-tabs"; // memo: from line 103 in menu.js .
+
+    // const info = {
+    //   url: '*://*/*',
+    //   discarded: menuItemId.startsWith('release'),
+    //   active: false
+    // };
+    // // alert();
+    // let tabs = await query(info);
+    // tabs.forEach(discard);
+    // end:
+
+    // let tbs=[];
+    // tbs = tbs.filter(({url, discarded, active}) => (url.startsWith('http') ||
+    // url.startsWith('ftp')) && !discarded && !active); // memo: filter by state is possible discard.
+    // console.log("filtered tbs count is ");
+    // console.log(tbs.length);
+    // console.log(tbs[1]);
+    // tbs.forEach(discard); // memo: discard tabs that is state possible discard.
+    // console.log("tbs are discarded.");
+
+    // end: ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    
+    starters.cache.push(c);
+  }
+};
+
+{
+  // preference are only up-to-date on the first run. For all other needs call storage().then()
+  const once = () => storage(prefs).then(ps => {
+    Object.assign(prefs, ps);
+    starters.ready = true;
+    starters.cache.forEach(c => c());
+    delete starters.cache;
+  });
+  chrome.runtime.onStartup.addListener(once);
+  chrome.runtime.onInstalled.addListener(once);
+}
+
+// clear session only hostnames from the exception list; only on the local machine
+starters.push(() => chrome.storage.local.set({
+  'whitelist.session': []
+}));
+
+chrome.storage.onChanged.addListener(ps => {
+  Object.keys(ps).forEach(k => {
+    prefs[k] = ps[k].newValue;
+  });
+  if (isFirefox && ps['go-hidden']) {
+    hidden.install();
+  }
+  if (ps.click) {
+    popup();
+  }
+  if (ps['idle-timeout']) {
+    chrome.idle.setDetectionInterval(prefs['idle-timeout']);
+  }
+});
+
+const log = (...args) => prefs.log && console.log(new Date(), ...args);
+
+const notify = e => chrome.notifications.create({ // eslint-disable-line no-unused-vars
+  title: chrome.runtime.getManifest().name,
+  type: 'basic',
+  iconUrl: 'data/icons/48.png',
+  message: e.message || e
+});
+
+const query = options => new Promise(resolve => chrome.tabs.query(options, resolve));
+
+const navigate = (method, discarded = false) => query({
+  currentWindow: true
+}).then(tbs => {
+  const active = tbs.filter(tbs => tbs.active).shift();
+  const next = tbs.filter(t => t.discarded === discarded && t.index > active.index);
+  const previous = tbs.filter(t => t.discarded === discarded && t.index < active.index);
+  let ntab;
+  if (method === 'move-next') {
+    ntab = next.length ? next.shift() : previous.shift();
+  }
+  else {
+    ntab = previous.length ? previous.pop() : next.pop();
+  }
+
+  if (ntab) {
+    chrome.tabs.update(ntab.id, {
+      active: true
+    }, () => {
+      if (method === 'close') {
+        chrome.tabs.remove(active.id);
+      }
+    });
+  }
+  // prevent infinite loop
+  else if (discarded === false) {
+    // https://github.com/rNeomy/auto-tab-discard/issues/41#issuecomment-422923307
+    return navigate(method, true);
+  }
+
+  // https://github.com/rNeomy/auto-tab-discard/issues/264#issuecomment-1001410665
+  if (method === 'close' && !ntab && tbs.length === 1 && tbs[0].active) {
+    chrome.tabs.remove(active.id);
+  }
+});
+
+
+chrome.runtime.onMessageExternal.addListener((request, sender, response) => {
   if (request.method === 'discard') {
     query(request.query).then((tbs = []) => {
       tbs = tbs.filter(({url, discarded, active}) => (url.startsWith('http') ||
-        url.startsWith('ftp')) && !discarded && !active);
-      tbs.forEach(discard);
-      resposne(tbs.map(t => t.id));
+        url.startsWith('ftp')) && !discarded && !active); // memo: filter by state is possible discard.
+        
+      console.log("in chrome.runtime.onMessageExternal.addListener, filterd tabs count is ");
+      console.log(tbs.length);
+      
+      tbs.forEach(discard); // memo: discard tabs that is state possible discard.
+      response(tbs.map(t => t.id));
     });
     return true;
   }
@@ -284,6 +368,11 @@ chrome.browserAction.setBadgeBackgroundColor({
 });
 
 chrome.runtime.onMessage.addListener((request, sender, resposne) => {
+  // memo: this method is not called, when hand operation that is discarding tab.
+
+  console.log("here is chrome.runtime.onMessage.addListener in background.js . byme");
+  console.log("and request.queryInfo : " + request.queryInfo + " . byme");
+
   log('onMessage request received', request);
   const {method} = request;
   if (method === 'is-unload-blocked') {
@@ -322,6 +411,8 @@ chrome.runtime.onMessage.addListener((request, sender, resposne) => {
     return true;
   }
   else if (method === 'tabs.query') {
+
+    // memo: what this argument for chrome.tabs.query?
     chrome.tabs.query(request.queryInfo, resposne);
     return true;
   }
@@ -345,26 +436,5 @@ if (isFirefox) {
 {
   const {management, runtime: {onInstalled, setUninstallURL, getManifest}, tabs} = chrome;
   if (navigator.webdriver !== true) {
-    const page = getManifest().homepage_url;
-    const {name, version} = getManifest();
-    onInstalled.addListener(({reason, previousVersion}) => {
-      management.getSelf(({installType}) => installType === 'normal' && storage({
-        'faqs': true,
-        'last-update': 0
-      }).then(prefs => {
-        if (reason === 'install' || (prefs.faqs && reason === 'update')) {
-          const doUpdate = (Date.now() - prefs['last-update']) / 1000 / 60 / 60 / 24 > 45;
-          if (doUpdate && previousVersion !== version) {
-            tabs.query({active: true, currentWindow: true}, tbs => tabs.create({
-              url: page + '?version=' + version + (previousVersion ? '&p=' + previousVersion : '') + '&type=' + reason,
-              active: reason === 'install',
-              ...(tbs && tbs.length && {index: tbs[0].index + 1})
-            }));
-            chrome.storage.local.set({'last-update': Date.now()});
-          }
-        }
-      }));
-    });
-    setUninstallURL(page + '?rd=feedback&name=' + encodeURIComponent(name) + '&version=' + version);
   }
 }
